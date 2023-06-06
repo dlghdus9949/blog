@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 import propTypes from 'prop-types';
+import { v4 as uuidv4 } from 'uuid';
+import Toast from "./Toast";
 
 const BlogForm = ({editing}) => {
     const navigate = useNavigate();
     const { id } =useParams();
-    
     const [title, setTitle] = useState('');
     const [originalTitle, setOriginalTitle] = useState('');
     const [body, setBody] = useState('');
@@ -15,6 +16,8 @@ const BlogForm = ({editing}) => {
     const [originalPublish, setOriginalPublish] = useState(false);
     const [titleError, setTitleError] = useState(false);
     const [bodyError, setBodyError] = useState(false);
+    const [, setToastRerender] = useState(false);
+    const toasts = useRef([]);
 
     useEffect(()=>{
         if (editing) {
@@ -56,6 +59,27 @@ const BlogForm = ({editing}) => {
         return validated;
     }
 
+    const deleteToast = (id) => {
+        const fillteredToasts = toasts.current.filter(toast => {
+            return toast.id !== id;
+        });
+        toasts.current = fillteredToasts;
+        setToastRerender(prev => !prev);
+    }
+
+    const addToast = (toast) => {
+        const id = uuidv4();
+        const toastWithId = {
+            ...toast,
+            id
+        }
+        toasts.current = [...toasts.current, toastWithId];
+        setToastRerender(prev => !prev);
+        setTimeout(()=>{
+            deleteToast(id);
+        }, 3000);
+    }
+
     const onSubmit = () => {
 
         setTitleError(false);
@@ -78,7 +102,11 @@ const BlogForm = ({editing}) => {
                     publish,
                     createdAt: Date.now()
                 }).then(()=>{
-                    navigate ('/admin');
+                    addToast({
+                        type: 'success',
+                        text: 'Successfully created!'
+                    });
+                    //navigate ('/admin');
                 })
             }
         }
@@ -91,6 +119,10 @@ const BlogForm = ({editing}) => {
 
     return(
         <div>
+            <Toast 
+                toasts={toasts.current}
+                deleteToast={deleteToast}
+            />
             <h1>{editing ? 'Edit' : 'Create'} a blog post</h1>
             <div className="mb-3">
               <label className="form-label">Title</label>

@@ -1,10 +1,12 @@
 import axios from "axios";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Card from "../components/Card";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import LoadingSpinner from "../components/LoadingSpinner";
 import Pagination from "./Pagination";
 import propTypes from 'prop-types';
+import Toast from "./Toast";
+import { v4 as uuidv4 } from 'uuid';
 
 const BlogList = ({isAdmin}) => {
 
@@ -18,6 +20,8 @@ const BlogList = ({isAdmin}) => {
     const [numberOfPosts, setNumberOfPosts] = useState(0);
     const [numberOfPages, setNumberOfPages] = useState(0);
     const [searchText, setSearchText] = useState('');
+    const [, setToastRerender] = useState(false);
+    const toasts = useRef([]);
     const limit = 5;
 
     useEffect(()=>{
@@ -78,10 +82,39 @@ const BlogList = ({isAdmin}) => {
         getPosts(parseInt(pageParam) || 1);
     },[]);
 
+    const deleteToast = (id) => {
+        const fillteredToasts = toasts.current.filter(toast => {
+            return toast.id !== id;
+        });
+
+        toasts.current = fillteredToasts;
+        setToastRerender(prev => !prev);
+    }
+
+    const addToast = (toast) => {
+        const id = uuidv4();
+        const toastWithId = {
+            ...toast,
+            id
+        }
+        toasts.current = [
+            ...toast.current,
+            toastWithId
+        ];
+        setToastRerender(prev => !prev);
+        setTimeout(()=>{
+            deleteToast(id);
+        }, 3000);
+    }
+
     const deleteBlog = (e, id) => {
         e.stopPropagation();
         axios.delete(`http://localhost:3001/posts/${id}`).then(()=>{
             setPosts(prevPosts => prevPosts.filter(post => post.id !== id));
+            addToast({
+                text: 'Successfully deleted',
+                type: 'success'
+            });
         });
     };
 
@@ -123,6 +156,10 @@ const BlogList = ({isAdmin}) => {
 
     return (
         <div>
+            <Toast
+                toasts={toasts.current}
+                deleteToast={deleteToast}
+            />
             <input 
                 type="text"
                 placeholder="Search..."
